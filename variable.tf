@@ -1,23 +1,23 @@
 ######################################################################
 ######   Secrets
-variable "subscriptionID" {
-  type      = string
-  sensitive = true
-}
+# variable "subscriptionID" {
+#   type      = string
+#   sensitive = true
+# }
 
-variable "tenantid" {
-  type      = string
-  sensitive = true
-}
-variable "clientid" {
-  type      = string
-  sensitive = true
-}
+# variable "tenantid" {
+#   type      = string
+#   sensitive = true
+# }
+# variable "clientid" {
+#   type      = string
+#   sensitive = true
+# }
 
-variable "clientsecret" {
-  type      = string
-  sensitive = true
-}
+# variable "clientsecret" {
+#   type      = string
+#   sensitive = true
+# }
 
 ######################################################################
 

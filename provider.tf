@@ -22,14 +22,7 @@ provider "azurerm" {
       recover_soft_deleted_key_vaults = true
     }
   }
-  subscription_id = var.subscriptionID
-  tenant_id       = var.tenantid
-  client_id       = var.clientid
-  client_secret   = var.clientsecret
+  # Credentials are provided via environment / OIDC in CI (ARM_* or Azure CLI).
+  # Do not hard-code client_id/client_secret/subscription/tenant here when using GitHub OIDC.
 }
-provider "azapi" {
-  subscription_id = var.subscriptionID
-  tenant_id       = var.tenantid
-  client_id       = var.clientid
-  client_secret   = var.clientsecret
-}
+provider "azapi" {}
