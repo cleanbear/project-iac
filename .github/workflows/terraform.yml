@@ -82,7 +82,12 @@ jobs:
             set -e
             TFVARS_VAL=$(az keyvault secret show --vault-name "${{ secrets.KEYVAULT_NAME }}" --name "${{ secrets.KEYVAULT_TFVARS_SECRET_NAME }}" --query value -o tsv)
             # Try decoding as base64 first; if that fails, write raw value
-            echo "$TFVARS_VAL" | base64 --decode > terraform.tfvars 2>/dev/null || echo "$TFVARS_VAL" > terraform.tfvars
+            if echo "$TFVARS_VAL" | base64 --decode > terraform.tfvars 2>/dev/null; then
+              echo "Successfully decoded base64 secret."
+            else
+              echo -e "$TFVARS_VAL" > terraform.tfvars
+              echo "Wrote raw secret value."
+            fi
             echo "terraform.tfvars has been created from Key Vault secret."
           else
             echo "KEYVAULT_NAME or KEYVAULT_TFVARS_SECRET_NAME not set; skipping Key Vault fetch."
@@ -95,10 +100,10 @@ jobs:
             echo "Preparing terraform.tfvars from repository secret..."
             if [ -n "${{ secrets.TERRAFORM_TFVARS_B64 }}" ]; then
               echo "Decoding base64 secret into terraform.tfvars"
-              echo "${{ secrets.TERRAFORM_TFVARS_B64 }}" | base64 --decode > terraform.tfvars
+              printf '%s' "${{ secrets.TERRAFORM_TFVARS_B64 }}" | base64 --decode > terraform.tfvars
             else
               echo "Writing raw secret into terraform.tfvars"
-              echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+              printf '%s' "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
             fi
           else
             echo "No TERRAFORM_TFVARS or TERRAFORM_TFVARS_B64 provided; skipping."
