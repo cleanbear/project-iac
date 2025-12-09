@@ -112,7 +112,7 @@ jobs:
       - name: Upload plan artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-artifacts
+          name: tfvars-artifacts
           path: |
             terraform.tfvars
 
@@ -137,7 +137,6 @@ jobs:
           path: |
             tfplan
             tfplan.json
-            terraformtfvars
 
   apply:
     name: Terraform Apply (requires approval)
