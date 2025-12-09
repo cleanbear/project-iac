@@ -111,6 +111,7 @@ jobs:
           path: |
             tfplan
             tfplan.json
+            terraformtfvars
 
   apply:
     name: Terraform Apply (requires approval)
