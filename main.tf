@@ -26,8 +26,8 @@ module "Vnet" {
   subnet_names        = var.subnet_names
   subnet_prefixes     = var.subnet_prefixes
    subnet_service_endpoints = {
-    "${var.subnet_names[0]}" = ["Microsoft.KeyVault", "Microsoft.Storage"],
-    "${var.subnet_names[1]}" = ["Microsoft.ContainerRegistry"]
+    "${var.subnet_names[0]}" = ["Microsoft.KeyVault", "Microsoft.Storage"]
+    "${var.subnet_names[1]}" = ["Microsoft.KeyVault", "Microsoft.ContainerRegistry"]
   }
   tags = local.tags
 }
@@ -69,10 +69,10 @@ module "aks" {
   cluster_log_analytics_workspace_name = "gk-eastus2-prod-loganalyticsws"
   log_analytics_workspace_enabled      = false
   agents_min_count                     = 1
-  agents_max_count                     = 2
+  agents_max_count                     = 1
   agents_count                         = null
   agents_pool_name                     = "gknodepool"
-  agents_size                          =  "Standard_B1s"  ##   
+  agents_size                          =  "Standard_B2s"  # 2 cores, 8GB RAM (meets AKS min requirements)   
   enable_auto_scaling                  = true
   key_vault_secrets_provider_enabled   = true
   storage_profile_blob_driver_enabled  = true

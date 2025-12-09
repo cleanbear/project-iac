@@ -1,22 +1,3 @@
-# GitHub Actions workflow to init/plan/checkov and gated apply for Terraform on Azure
-# - Uses GitHub OIDC + Azure App Registration (federated credential)
-# - Uploads `tfplan` and `tfplan.json` from plan job to apply job
-# - Apply job is protected by GitHub Environment `production` (set reviewers in repo settings)
-#
-# Required repository secrets (set these in repo Settings -> Secrets & variables -> Actions):
-# - AZURE_CLIENT_ID         -> Azure App Registration client id
-# - AZURE_TENANT_ID         -> Azure tenant id
-# - AZURE_SUBSCRIPTION_ID   -> Azure subscription id
-# - BACKEND_RESOURCE_GROUP  -> resource group for tfstate
-# - BACKEND_STORAGE_ACCOUNT -> storage account name for tfstate
-# - BACKEND_CONTAINER       -> container name for tfstate
-# - BACKEND_KEY             -> key (state file name), e.g. "gkprod.tfstate"
-# - TERRAFORM_TFVARS        -> (optional) full contents of terraform.tfvars as a secret
-#
-# Notes:
-# - You must configure your Azure App Registration to accept GitHub Actions OIDC tokens (federated credential).
-# - For manual approval before apply, create an Environment named `production` in repo settings and add at least one required reviewer.
-
 name: Terraform CI/CD
 
 on:
