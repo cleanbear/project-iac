@@ -40,35 +40,38 @@ terraform plan
 terraform apply
 ```
 
-## Managing Secrets
+## GitHub Actions Setup
 
-### GitHub Secrets Method
+### Required Repository Secrets
 
-Store `terraform.tfvars` as a GitHub secret for CI/CD pipelines:
+To run the GitHub Actions CI/CD workflow, configure the following secrets in your repository (Settings → Secrets and variables → Actions):
 
-**PowerShell:**
-```powershell
-$content = Get-Content -Raw -Path 'terraform.tfvars'
-$b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content))
-gh secret set TERRAFORM_TFVARS_B64 --body $b64
-```
+**Azure Authentication:**
+- `AZURE_CLIENT_ID` - Azure App Registration client ID
+- `AZURE_TENANT_ID` - Azure tenant ID
+- `AZURE_SUBSCRIPTION_ID` - Azure subscription ID
 
-**Bash:**
-```bash
-base64 -w0 terraform.tfvars | xargs gh secret set TERRAFORM_TFVARS_B64 --body
-```
+**Terraform State Backend:**
+- `BACKEND_RESOURCE_GROUP` - Resource group containing the state storage account
+- `BACKEND_STORAGE_ACCOUNT` - Storage account name for tfstate
+- `BACKEND_CONTAINER` - Container name for tfstate
+- `BACKEND_KEY` - State file name (e.g., "gkprod.tfstate")
 
-### Azure Key Vault Method
+**Terraform Variables (choose one method):**
+- `TERRAFORM_TFVARS` - Raw contents of terraform.tfvars, OR
+- `TERRAFORM_TFVARS_B64` - Base64-encoded terraform.tfvars
 
-Store secrets in Key Vault instead:
+**Azure Key Vault (optional):**
+- `KEYVAULT_NAME` - Key Vault name
+- `KEYVAULT_TFVARS_SECRET_NAME` - Secret name containing tfvars
 
-```bash
-az keyvault secret set --vault-name my-kv --name terraform-tfvars --value "$(cat terraform.tfvars)"
-```
+### Workflow Details
 
-Set GitHub secrets:
-- `KEYVAULT_NAME`: my-kv
-- `KEYVAULT_TFVARS_SECRET_NAME`: terraform-tfvars
+- Triggers on push to `ENV-*` branches
+- Uses GitHub OIDC + Azure App Registration for authentication
+- Plan job runs automatically
+- Apply job requires approval via GitHub environment `production`
+- Runs Checkov for security scanning
 
 ## File Structure
 
