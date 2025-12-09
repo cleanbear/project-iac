@@ -202,10 +202,10 @@ resource "azurerm_storage_account" "st" {
     cors_rule {
       # Use empty lists when no CORS headers/origins are required.
       # To allow specific origins, replace [] with e.g. ["https://example.com"]
-      allowed_headers    = []
+      allowed_headers    = [""]
       allowed_methods    = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH"]
       allowed_origins    = []
-      exposed_headers    = []
+      exposed_headers    = [""]
       max_age_in_seconds = 0
     }
   }
