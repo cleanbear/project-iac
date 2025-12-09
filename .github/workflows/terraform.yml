@@ -23,7 +23,7 @@ on:
   push:
     # Adjust branches as needed. The Jenkins pipeline used branch names like "ENV-prod".
     branches:
-      - "ENV-*"
+      - "development"
   workflow_dispatch: {}
 
 permissions:
@@ -33,6 +33,7 @@ permissions:
 jobs:
   plan:
     name: Terraform Plan + Checkov
+    environment: development
     runs-on: ubuntu-latest
 
     steps:
