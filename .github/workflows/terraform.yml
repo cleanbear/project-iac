@@ -109,7 +109,7 @@ jobs:
         with:
           name: tfplan-artifacts
           path: |
-            terraformtfvars
+            terraform.tfvars
 
       - name: Terraform Init
         run: terraform init -upgrade -backend-config=gk-backend.conf -no-color
