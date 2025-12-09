@@ -69,26 +69,32 @@ jobs:
         # - KEYVAULT_NAME
         # - KEYVAULT_TFVARS_SECRET_NAME
         # The workflow will retrieve the secret value and write `terraform.tfvars`.
-        if: ${{ secrets.KEYVAULT_NAME != '' && secrets.KEYVAULT_TFVARS_SECRET_NAME != '' }}
         run: |
-          echo "Retrieving terraform.tfvars from Key Vault ${KEYVAULT_NAME}..."
-          set -e
-          TFVARS_VAL=$(az keyvault secret show --vault-name "${{ secrets.KEYVAULT_NAME }}" --name "${{ secrets.KEYVAULT_TFVARS_SECRET_NAME }}" --query value -o tsv)
-          # Try decoding as base64 first; if that fails, write raw value
-          echo "$TFVARS_VAL" | base64 --decode > terraform.tfvars 2>/dev/null || echo "$TFVARS_VAL" > terraform.tfvars
-          echo "terraform.tfvars has been created from Key Vault secret."
+          if [ -n "${{ secrets.KEYVAULT_NAME }}" ] && [ -n "${{ secrets.KEYVAULT_TFVARS_SECRET_NAME }}" ]; then
+            echo "Retrieving terraform.tfvars from Key Vault ${{ secrets.KEYVAULT_NAME }}..."
+            set -e
+            TFVARS_VAL=$(az keyvault secret show --vault-name "${{ secrets.KEYVAULT_NAME }}" --name "${{ secrets.KEYVAULT_TFVARS_SECRET_NAME }}" --query value -o tsv)
+            # Try decoding as base64 first; if that fails, write raw value
+            echo "$TFVARS_VAL" | base64 --decode > terraform.tfvars 2>/dev/null || echo "$TFVARS_VAL" > terraform.tfvars
+            echo "terraform.tfvars has been created from Key Vault secret."
+          else
+            echo "KEYVAULT_NAME or KEYVAULT_TFVARS_SECRET_NAME not set; skipping Key Vault fetch."
+          fi
 
       - name: Populate terraform.tfvars (optional)
         # Supports either a raw multiline secret `TERRAFORM_TFVARS` or a base64-encoded secret `TERRAFORM_TFVARS_B64`
-        if: ${{ secrets.TERRAFORM_TFVARS != '' || secrets.TERRAFORM_TFVARS_B64 != '' }}
         run: |
-          echo "Preparing terraform.tfvars from repository secret..."
-          if [ -n "${{ secrets.TERRAFORM_TFVARS_B64 }}" ]; then
-            echo "Decoding base64 secret into terraform.tfvars"
-            echo "${{ secrets.TERRAFORM_TFVARS_B64 }}" | base64 --decode > terraform.tfvars
+          if [ -n "${{ secrets.TERRAFORM_TFVARS_B64 }}" ] || [ -n "${{ secrets.TERRAFORM_TFVARS }}" ]; then
+            echo "Preparing terraform.tfvars from repository secret..."
+            if [ -n "${{ secrets.TERRAFORM_TFVARS_B64 }}" ]; then
+              echo "Decoding base64 secret into terraform.tfvars"
+              echo "${{ secrets.TERRAFORM_TFVARS_B64 }}" | base64 --decode > terraform.tfvars
+            else
+              echo "Writing raw secret into terraform.tfvars"
+              echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+            fi
           else
-            echo "Writing raw secret into terraform.tfvars"
-            echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+            echo "No TERRAFORM_TFVARS or TERRAFORM_TFVARS_B64 provided; skipping."
           fi
 
       - name: Terraform Init
