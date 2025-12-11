@@ -282,7 +282,7 @@ resource "azurerm_application_insights" "ai_apim" {
   name                = "${var.apim_name}-appinsights"
   location            = var.location
   resource_group_name = var.resourceGroupName
-  application_type    = "NodeJs"
+  application_type    = "Node.JS"
 
   tags = local.tags
 }
