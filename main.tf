@@ -22,8 +22,8 @@ module "Vnet" {
   subnet_names        = var.subnet_names
   subnet_prefixes     = var.subnet_prefixes
    subnet_service_endpoints = {
-    "${var.subnet_names[0]}" = ["Microsoft.KeyVault", "Microsoft.Storage"]
-    "${var.subnet_names[1]}" = ["Microsoft.KeyVault", "Microsoft.ContainerRegistry"]
+    "${var.subnet_names[0]}" = ["Microsoft.KeyVault"]
+    "${var.subnet_names[1]}" = ["Microsoft.KeyVault"]
     "${var.subnet_names[2]}" = ["Microsoft.KeyVault"]
   }
   tags = local.tags
@@ -36,10 +36,7 @@ resource "azurerm_container_registry" "acr" {
   location            = var.location
   resource_group_name = var.resourceGroupName
   admin_enabled       = true
-  sku                 = "Basic"
-  anonymous_pull_enabled = false
-  public_network_access_enabled = var.public_network_access_enabled
-
+  sku                 = "Standard"
   tags = local.tags
 }
 
@@ -138,8 +135,6 @@ resource "azurerm_storage_account" "st" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  min_tls_version          = "TLS1_2"
-  allow_nested_items_to_be_public = true
   # blob_properties {
   #   delete_retention_policy {
   #     days = 10
@@ -232,15 +227,14 @@ resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributo
 module "aks" {
   source                               = "Azure/aks/azurerm"
   version                              = "9.4.1"
-  resource_group_name                  = var.resourceGroupName
-  private_cluster_enabled              = false
-  cluster_name                         = var.aks_cluster_name
   sku_tier                             = "Standard"
+  resource_group_name                  = var.resourceGroupName
+  cluster_name                         = var.aks_cluster_name
   location                             = var.location
   agents_availability_zones            = var.aks_agents_availability_zones
+  vnet_subnet_id                       = module.Vnet.vnet_subnets[1]
   role_based_access_control_enabled    = false
   rbac_aad                             = false
-  vnet_subnet_id                       = module.Vnet.vnet_subnets[1]
   network_policy                       = "azure"
   network_plugin                       = "azure"
   cluster_log_analytics_workspace_name = var.log_analytics_workspace_name
