@@ -59,10 +59,10 @@ variable "aks_allowed_ip_addresses" {
 }
 ######################################################################
 
-variable "allowed_ip_addresses" {
-  description = "List of allowed IP addresses."
-  type        = list(string)
-}
+# variable "allowed_ip_addresses" {
+#   description = "List of allowed IP addresses."
+#   type        = list(string)
+# }
 
 ######################################################################
 
