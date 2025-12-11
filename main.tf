@@ -1,17 +1,13 @@
-#############  IPL-Eximius Prod Infra ###########################
-
 locals {
 
   tags={
-    Environment = "Prod"
-    Studio = "testing"
-    Division = "my"
-    Account_Manager = "Guru Kalyan"
+    Environment = "dev-qa"
+    Studio = "eximius"
+    Division = "cd"
+    Account_Manager = "Ajay Kumar Singh"
   }
 
 }
-
-#####################################################################################
 
 ###################  Virtual Network ###################
 
@@ -28,11 +24,10 @@ module "Vnet" {
    subnet_service_endpoints = {
     "${var.subnet_names[0]}" = ["Microsoft.KeyVault", "Microsoft.Storage"]
     "${var.subnet_names[1]}" = ["Microsoft.KeyVault", "Microsoft.ContainerRegistry"]
+    "${var.subnet_names[2]}" = ["Microsoft.ApiManagement"]
   }
   tags = local.tags
 }
-
-#####################################################################################
 
 ###################  Azure Container Registry ###################
 
@@ -47,48 +42,6 @@ resource "azurerm_container_registry" "acr" {
 
   tags = local.tags
 }
-
-#####################################################################################
-
-###################  AKS  ###################
-module "aks" {
-  source                               = "Azure/aks/azurerm"
-  version                              = "9.4.1"
-  resource_group_name                  = var.resourceGroupName
-  private_cluster_enabled              = false
-  cluster_name                         = var.aks_cluster_name
-  location                             = var.location
-  agents_availability_zones            = var.aks_agents_availability_zones
-  role_based_access_control_enabled    = true
-  rbac_aad                             = false
-  vnet_subnet_id                       = module.Vnet.vnet_subnets[0]
-  network_policy                       = "azure"
-  net_profile_dns_service_ip           = var.net_profile_dns_service_ip
-  net_profile_service_cidr             = var.net_profile_service_cidr
-  network_plugin                       = "azure"
-  cluster_log_analytics_workspace_name = "gk-eastus2-prod-loganalyticsws"
-  log_analytics_workspace_enabled      = false
-  agents_min_count                     = 1
-  agents_max_count                     = 1
-  agents_count                         = null
-  agents_pool_name                     = "gknodepool"
-  agents_size                          =  "Standard_B2s"  # 2 cores, 8GB RAM (meets AKS min requirements)   
-  enable_auto_scaling                  = true
-  key_vault_secrets_provider_enabled   = true
-  storage_profile_blob_driver_enabled  = true
-  storage_profile_disk_driver_enabled  = true
-  prefix                               = var.aks_prefix
-  attached_acr_id_map = {
-    acr = azurerm_container_registry.acr.id
-  }
-  api_server_authorized_ip_ranges =  var.allowed_ip_addresses
-  
-  tags = local.tags
-
-  depends_on = [azurerm_container_registry.acr]
- }
-
-#####################################################################################
 
 ###################  Key Vault  ###################
 
@@ -107,7 +60,7 @@ resource "azurerm_key_vault" "keyvault" {
     default_action             = "Deny"
     bypass                     = "AzureServices"
     ip_rules                   = var.allowed_ip_addresses
-    virtual_network_subnet_ids = module.Vnet.vnet_subnets
+    virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
   }
   tags = local.tags
 }
@@ -148,7 +101,6 @@ resource "azurerm_private_dns_zone_virtual_network_link" "kv_private_dns_zone_vi
   tags = local.tags
 }
 
-
 resource "azurerm_key_vault_access_policy" "kvpolicy" {
   key_vault_id       = azurerm_key_vault.keyvault.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
@@ -185,7 +137,6 @@ resource "azurerm_key_vault_secret" "gk_secrets" {
     ]
   }
 }
-#####################################################################################
 
 ##################  Storage Account (Azure Blob) ###################
 resource "azurerm_storage_account" "st" {
@@ -211,9 +162,10 @@ resource "azurerm_storage_account" "st" {
     # }
   }
   network_rules {
-    default_action = "Allow"
+    default_action             = "Deny"
     ip_rules       = var.allowed_ip_addresses
-     bypass         = ["AzureServices"]
+    bypass                     = ["AzureServices"]
+    virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
   }
   tags = local.tags
 }
@@ -259,9 +211,120 @@ resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_lnk_sta" {
   tags = local.tags
 }
 
+resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributor" {
+  scope                = azurerm_storage_account.st.id
+  role_definition_name = "Contributor"
+  principal_id         = module.aks.kubelet_identity[0].object_id
+}
+###################  AKS  ###################
+module "aks" {
+  source                               = "Azure/aks/azurerm"
+  version                              = "9.4.1"
+  resource_group_name                  = var.resourceGroupName
+  private_cluster_enabled              = false
+  cluster_name                         = var.aks_cluster_name
+  location                             = var.location
+  agents_availability_zones            = var.aks_agents_availability_zones
+  role_based_access_control_enabled    = true
+  rbac_aad                             = false
+  vnet_subnet_id                       = module.Vnet.vnet_subnets[1]
+  network_policy                       = "azure"
+  net_profile_dns_service_ip           = var.net_profile_dns_service_ip
+  net_profile_service_cidr             = var.net_profile_service_cidr
+  network_plugin                       = "azure"
+  cluster_log_analytics_workspace_name = var.log_analytics_workspace_name
+  log_analytics_workspace_enabled      = true
+  agents_min_count                     = 1
+  agents_max_count                     = 1
+  agents_count                         = null
+  agents_pool_name                     = "gknodepool"
+  agents_size                          = "Standard_D2s_V3"
+  enable_auto_scaling                  = true
+  key_vault_secrets_provider_enabled   = true
+  storage_profile_blob_driver_enabled  = true
+  storage_profile_disk_driver_enabled  = true
+  prefix                               = var.aks_prefix
+  attached_acr_id_map = {
+    acr = azurerm_container_registry.acr.id
+  }
+  api_server_authorized_ip_ranges =  var.allowed_ip_addresses
+  
+  tags = local.tags
 
- resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributor" {
-   scope                = azurerm_storage_account.st.id
-   role_definition_name = "Contributor"
-   principal_id         = module.aks.kubelet_identity[0].object_id
- }
+  depends_on = [azurerm_container_registry.acr]
+}
+
+###################  API Management ###################
+
+resource "azurerm_api_management" "apim" {
+  name                = var.apim_name
+  location            = var.location
+  resource_group_name = var.resourceGroupName
+  publisher_name      = var.apim_publisher_name
+  publisher_email     = var.apim_publisher_email
+  sku_name            = var.apim_sku
+
+  tags = local.tags
+}
+
+###################  Log Analytics Workspace ###################
+
+resource "azurerm_log_analytics_workspace" "la" {
+  name                = var.log_analytics_workspace_name
+  location            = var.location
+  resource_group_name = var.resourceGroupName
+  sku                 = "PerGB2018"
+  retention_in_days   = var.log_analytics_retention_days
+
+  tags = local.tags
+}
+
+###################  Application Insights for APIM ###################
+
+resource "azurerm_application_insights" "ai_apim" {
+  name                = "${var.apim_name}-ai"
+  location            = var.location
+  resource_group_name = var.resourceGroupName
+  application_type    = "web"
+
+  tags = local.tags
+}
+
+# Create APIM logger that points to App Insights (using azapi to avoid provider schema mismatches)
+resource "azapi_resource" "apim_logger" {
+  type      = "Microsoft.ApiManagement/service/loggers@2021-08-01"
+  name      = "appinsights-logger"
+  parent_id = azurerm_api_management.apim.id
+
+  body = jsonencode({
+    properties = {
+      loggerType  = "applicationinsights"
+      description = "Application Insights logger for APIM"
+      credentials = {
+        instrumentationKey = azurerm_application_insights.ai_apim.instrumentation_key
+      }
+    }
+  })
+
+  depends_on = [azurerm_api_management.apim, azurerm_application_insights.ai_apim]
+}
+
+# Create APIM diagnostic that uses the above logger (sends telemetry to App Insights)
+resource "azapi_resource" "apim_ai_diag" {
+  type      = "Microsoft.ApiManagement/service/diagnostics@2021-08-01"
+  name      = "appinsights-diagnostic"
+  parent_id = azurerm_api_management.apim.id
+
+  body = jsonencode({
+    properties = {
+      enabled   = true
+      alwaysLog = "allErrors"
+      loggerId  = azapi_resource.apim_logger.id
+      sampling  = { sample = 100 }
+      frontend  = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
+      backend   = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
+    }
+  })
+
+  depends_on = [azapi_resource.apim_logger, azurerm_api_management.apim]
+}

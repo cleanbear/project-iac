@@ -1,25 +1,4 @@
 ######################################################################
-######   Secrets
-# variable "subscriptionID" {
-#   type      = string
-#   sensitive = true
-# }
-
-# variable "tenantid" {
-#   type      = string
-#   sensitive = true
-# }
-# variable "clientid" {
-#   type      = string
-#   sensitive = true
-# }
-
-# variable "clientsecret" {
-#   type      = string
-#   sensitive = true
-# }
-
-######################################################################
 
 variable "resourceGroupName" {
   description = "The name of the resource group."
@@ -159,4 +138,40 @@ variable "kvsecrets" {
     name  = string
     value = string
   }))
+}
+
+variable "apim_name" {
+  description = "The name of the API Management service."
+  type        = string
+  default     = "apim-service"
+}
+
+variable "apim_publisher_name" {
+  description = "Publisher/display name for APIM."
+  type        = string
+  default     = "Dev Team"
+}
+
+variable "apim_publisher_email" {
+  description = "Publisher email for APIM."
+  type        = string
+  default     = "devops@example.com"
+}
+
+variable "apim_sku" {
+  description = "SKU name for API Management. Use 'Consumption_0' for Consumption tier."
+  type        = string
+  default     = "Consumption_0"
+}
+
+variable "log_analytics_workspace_name" {
+  description = "Name of the Log Analytics workspace used for cluster and APIM diagnostics."
+  type        = string
+  default     = "gk-eastus2-prod-loganalyticsws"
+}
+
+variable "log_analytics_retention_days" {
+  description = "Retention days for the Log Analytics workspace."
+  type        = number
+  default     = 30
 }
