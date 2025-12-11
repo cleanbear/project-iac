@@ -287,40 +287,40 @@ resource "azurerm_application_insights" "ai_apim" {
 }
 
 # Create APIM logger that points to App Insights (using azapi to avoid provider schema mismatches)
-resource "azapi_resource" "apim_logger" {
-  type      = "Microsoft.ApiManagement/service/loggers@2021-08-01"
-  name      = "appinsights-logger"
-  parent_id = azurerm_api_management.apim.id
+# resource "azapi_resource" "apim_logger" {
+#   type      = "Microsoft.ApiManagement/service/loggers@2021-08-01"
+#   name      = "appinsights-logger"
+#   parent_id = azurerm_api_management.apim.id
 
-  body = jsonencode({
-    properties = {
-      loggerType  = "applicationinsights"
-      description = "Application Insights logger for APIM"
-      credentials = {
-        instrumentationKey = azurerm_application_insights.ai_apim.instrumentation_key
-      }
-    }
-  })
+#   body = jsonencode({
+#     properties = {
+#       loggerType  = "applicationinsights"
+#       description = "Application Insights logger for APIM"
+#       credentials = {
+#         instrumentationKey = azurerm_application_insights.ai_apim.instrumentation_key
+#       }
+#     }
+#   })
 
-  depends_on = [azurerm_api_management.apim, azurerm_application_insights.ai_apim]
-}
+#   depends_on = [azurerm_api_management.apim, azurerm_application_insights.ai_apim]
+# }
 
-# Create APIM diagnostic that uses the above logger (sends telemetry to App Insights)
-resource "azapi_resource" "apim_ai_diag" {
-  type      = "Microsoft.ApiManagement/service/diagnostics@2021-08-01"
-  name      = "appinsights-diagnostic"
-  parent_id = azurerm_api_management.apim.id
+# # Create APIM diagnostic that uses the above logger (sends telemetry to App Insights)
+# resource "azapi_resource" "apim_ai_diag" {
+#   type      = "Microsoft.ApiManagement/service/diagnostics@2021-08-01"
+#   name      = "appinsights-diagnostic"
+#   parent_id = azurerm_api_management.apim.id
 
-  body = jsonencode({
-    properties = {
-      enabled   = true
-      alwaysLog = "allErrors"
-      loggerId  = azapi_resource.apim_logger.id
-      sampling  = { sample = 100 }
-      frontend  = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
-      backend   = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
-    }
-  })
+#   body = jsonencode({
+#     properties = {
+#       enabled   = true
+#       alwaysLog = "allErrors"
+#       loggerId  = azapi_resource.apim_logger.id
+#       sampling  = { sample = 100 }
+#       frontend  = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
+#       backend   = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
+#     }
+#   })
 
-  depends_on = [azapi_resource.apim_logger, azurerm_api_management.apim]
-}
+#   depends_on = [azapi_resource.apim_logger, azurerm_api_management.apim]
+# }
