@@ -238,7 +238,7 @@ module "aks" {
   sku_tier                             = "Standard"
   location                             = var.location
   agents_availability_zones            = var.aks_agents_availability_zones
-  role_based_access_control_enabled    = true
+  role_based_access_control_enabled    = false
   rbac_aad                             = false
   vnet_subnet_id                       = module.Vnet.vnet_subnets[1]
   network_policy                       = "azure"
