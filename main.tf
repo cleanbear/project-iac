@@ -24,7 +24,6 @@ module "Vnet" {
    subnet_service_endpoints = {
     "${var.subnet_names[0]}" = ["Microsoft.KeyVault", "Microsoft.Storage"]
     "${var.subnet_names[1]}" = ["Microsoft.KeyVault", "Microsoft.ContainerRegistry"]
-    "${var.subnet_names[2]}" = ["Microsoft.ApiManagement"]
   }
   tags = local.tags
 }
