@@ -59,13 +59,13 @@ resource "azurerm_key_vault" "keyvault" {
   network_acls {
     default_action             = "Deny"
     bypass                     = "AzureServices"
-    ip_rules                   = var.akv_allowed_ip_addresses
+    ip_rules                   = []
     virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
   }
   tags = local.tags
 }
 
-resource "azurerm_private_dns_zone" "main" {
+resource "azurerm_private_dns_zone" "kv" {
   name                = "privatelink.vaultcore.azure.net"
   resource_group_name = var.resourceGroupName
 
@@ -80,7 +80,7 @@ resource "azurerm_private_endpoint" "pe_kv" {
 
   private_dns_zone_group {
     name                 = var.private_dns_zone_group_kv_name
-    private_dns_zone_ids = [azurerm_private_dns_zone.main.id]
+    private_dns_zone_ids = [azurerm_private_dns_zone.kv.id]
   }
 
   private_service_connection {
@@ -90,15 +90,19 @@ resource "azurerm_private_endpoint" "pe_kv" {
     subresource_names              = ["Vault"]
   }
   tags = local.tags
+
+  depends_on = [ module.Vnet, azurerm_key_vault.keyvault, azurerm_private_dns_zone.kv ]
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "kv_private_dns_zone_virtual_network_link1" {
   name                  = var.azurerm_private_dns_zone_virtual_network_link_kv_name
-  private_dns_zone_name = azurerm_private_dns_zone.main.name
+  private_dns_zone_name = azurerm_private_dns_zone.kv.name
   resource_group_name   = var.resourceGroupName
   virtual_network_id    = module.Vnet.vnet_id
 
   tags = local.tags
+
+  depends_on = [ module.Vnet, azurerm_private_dns_zone.kv ]
 }
 
 resource "azurerm_key_vault_access_policy" "kvpolicy" {
@@ -107,6 +111,8 @@ resource "azurerm_key_vault_access_policy" "kvpolicy" {
   object_id          = module.aks.kubelet_identity[0].object_id
   key_permissions    = ["Get"]
   secret_permissions = ["Get"]
+
+  depends_on = [ module.aks ]
 }
 
 resource "azurerm_key_vault_access_policy" "kvpolicytf" {
@@ -123,19 +129,6 @@ resource "azurerm_key_vault_access_policy" "kvpolicyuser" {
   object_id          = var.object_id
   key_permissions    = ["Get", "Create"]
   secret_permissions = ["Get", "Set"]
-}
-
-resource "azurerm_key_vault_secret" "gk_secrets" {
-  count        = length(var.kvsecrets)
-  name         = var.kvsecrets[count.index].name
-  value        = var.kvsecrets[count.index].value
-  key_vault_id = azurerm_key_vault.keyvault.id
-  depends_on   = [azurerm_key_vault_access_policy.kvpolicytf]
-  lifecycle {
-    ignore_changes = [
-      value
-    ]
-  }
 }
 
 ##################  Storage Account (Azure Blob) ###################
@@ -163,7 +156,7 @@ resource "azurerm_storage_account" "st" {
   # }
   network_rules {
     default_action             = "Deny"
-    ip_rules       = var.sta_allowed_ip_addresses
+    ip_rules       = []
     bypass                     = ["AzureServices"]
     virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
   }
@@ -174,6 +167,8 @@ resource "azurerm_storage_container" "blob" {
   name                  = var.storage_container_name
   storage_account_name  = azurerm_storage_account.st.name
   container_access_type = "blob"
+
+  depends_on = [ azurerm_storage_account.st ]
 }
 
 resource "azurerm_private_dns_zone" "pdns_st" {
@@ -201,6 +196,8 @@ resource "azurerm_private_endpoint" "pep_st" {
     private_dns_zone_ids = [azurerm_private_dns_zone.pdns_st.id]
   }
   tags = local.tags
+
+  depends_on = [ module.Vnet, azurerm_storage_account.st, azurerm_private_dns_zone.pdns_st ]
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_lnk_sta" {
@@ -209,24 +206,28 @@ resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_lnk_sta" {
   private_dns_zone_name = azurerm_private_dns_zone.pdns_st.name
   virtual_network_id    = module.Vnet.vnet_id
   tags = local.tags
+
+  depends_on = [ module.Vnet, azurerm_private_dns_zone.pdns_st ]
 }
 
 resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributor" {
   scope                = azurerm_storage_account.st.id
   role_definition_name = "Contributor"
   principal_id         = module.aks.kubelet_identity[0].object_id
-}
-###################  Log Analytics Workspace ###################
 
-resource "azurerm_log_analytics_workspace" "la" {
-  name                = var.log_analytics_workspace_name
-  location            = var.location
-  resource_group_name = var.resourceGroupName
-  sku                 = "PerGB2018"
-  retention_in_days   = var.log_analytics_retention_days
-
-  tags = local.tags
+  depends_on = [ module.aks, azurerm_storage_account.st ]
 }
+# ###################  Log Analytics Workspace ###################
+
+# resource "azurerm_log_analytics_workspace" "la" {
+#   name                = var.log_analytics_workspace_name
+#   location            = var.location
+#   resource_group_name = var.resourceGroupName
+#   sku                 = "PerGB2018"
+#   retention_in_days   = var.log_analytics_retention_days
+
+#   tags = local.tags
+# }
 ###################  AKS  ###################
 module "aks" {
   source                               = "Azure/aks/azurerm"
@@ -242,7 +243,7 @@ module "aks" {
   vnet_subnet_id                       = module.Vnet.vnet_subnets[1]
   network_policy                       = "azure"
   network_plugin                       = "azure"
-  cluster_log_analytics_workspace_name = azurerm_log_analytics_workspace.la.name
+  cluster_log_analytics_workspace_name = var.log_analytics_workspace_name
   log_analytics_workspace_enabled      = true
   agents_min_count                     = 1
   agents_max_count                     = 2
@@ -257,7 +258,7 @@ module "aks" {
   attached_acr_id_map = {
     acr = azurerm_container_registry.acr.id
   }
-  api_server_authorized_ip_ranges =  var.aks_allowed_ip_addresses
+  api_server_authorized_ip_ranges =  []
   
   tags = local.tags
 

@@ -53,10 +53,10 @@ variable "aks_prefix" {
   type        = string
 }
 
-variable "aks_allowed_ip_addresses" {
-  description = "List of allowed IP addresses for AKS."
-  type        = list(string)
-}
+# variable "aks_allowed_ip_addresses" {
+#   description = "List of allowed IP addresses for AKS."
+#   type        = list(string)
+# }
 ######################################################################
 
 # variable "allowed_ip_addresses" {
@@ -93,10 +93,10 @@ variable "azurerm_private_dns_zone_virtual_network_link_storage_name" {
   description = "Name of  storage virtual link Name"
 }
 
-variable "sta_allowed_ip_addresses" {
-  description = "List of allowed IP addresses."
-  type        = list(string)
-}
+# variable "sta_allowed_ip_addresses" {
+#   description = "List of allowed IP addresses."
+#   type        = list(string)
+# }
 #################################################################
 
 #################################################################
@@ -105,10 +105,10 @@ variable "key_vault_name" {
   type        = string
 }
 
-variable "akv_allowed_ip_addresses" {
-  description = "List of allowed IP addresses for Key Vault."
-  type        = list(string)
-}
+# variable "akv_allowed_ip_addresses" {
+#   description = "List of allowed IP addresses for Key Vault."
+#   type        = list(string)
+# }
 
 variable "azurerm_private_endpoint_kv_name" {
   description = "Name of  keyvalut private end point Name"
@@ -130,13 +130,13 @@ variable "object_id" {
   description = "Object ID of user for Key Vault access policy."
 }
 
-variable "kvsecrets" {
-  description = "List of key vault secrets."
-  type        = list(object({
-    name  = string
-    value = string
-  }))
-}
+# variable "kvsecrets" {
+#   description = "List of key vault secrets."
+#   type        = list(object({
+#     name  = string
+#     value = string
+#   }))
+# }
 
 variable "apim_name" {
   description = "The name of the API Management service."
@@ -168,8 +168,8 @@ variable "log_analytics_workspace_name" {
   default     = "gk-eastus2-prod-loganalyticsws"
 }
 
-variable "log_analytics_retention_days" {
-  description = "Retention days for the Log Analytics workspace."
-  type        = number
-  default     = 30
-}
+# variable "log_analytics_retention_days" {
+#   description = "Retention days for the Log Analytics workspace."
+#   type        = number
+#   default     = 30
+# }
