@@ -48,19 +48,14 @@ variable "aks_agents_availability_zones" {
   type        = list(string)
 }
 
-variable "net_profile_dns_service_ip" {
-  description = "The DNS service IP for AKS networking profile."
-  type        = string
-}
-
-variable "net_profile_service_cidr" {
-  description = "The service CIDR for AKS networking profile."
-  type        = string
-}
-
 variable "aks_prefix" {
   description = "Prefix for AKS-related resources."
   type        = string
+}
+
+variable "aks_allowed_ip_addresses" {
+  description = "List of allowed IP addresses for AKS."
+  type        = list(string)
 }
 ######################################################################
 
@@ -82,9 +77,6 @@ variable "storage_container_name" {
   type        = string
 }
 
-variable "azurerm_private_dns_zone_storage_name" {
-  description = "Name of  private dns Name"
-}
 variable "azurerm_private_endpoint_storage_name" {
   description = "Name of  storage private end point Name"
 }
@@ -100,6 +92,11 @@ variable "private_service_connection_storage_name" {
 variable "azurerm_private_dns_zone_virtual_network_link_storage_name" {
   description = "Name of  storage virtual link Name"
 }
+
+variable "sta_allowed_ip_addresses" {
+  description = "List of allowed IP addresses."
+  type        = list(string)
+}
 #################################################################
 
 #################################################################
@@ -108,12 +105,9 @@ variable "key_vault_name" {
   type        = string
 }
 
-variable "azurerm_private_dns_zone_kv_name" {
-  description = "Name of  keyvalut private dns Name"
-}
-
-variable "private_service_connection_kv_name" {
-  description = "Name of  keyvalut private service connection Name"
+variable "akv_allowed_ip_addresses" {
+  description = "List of allowed IP addresses for Key Vault."
+  type        = list(string)
 }
 
 variable "azurerm_private_endpoint_kv_name" {
@@ -122,6 +116,10 @@ variable "azurerm_private_endpoint_kv_name" {
 
 variable "private_dns_zone_group_kv_name" {
   description = "Name of  keyvalut dns group Name"
+}
+
+variable "private_service_connection_kv_name" {
+  description = "Name of  keyvalut private service connection Name"
 }
 
 variable "azurerm_private_dns_zone_virtual_network_link_kv_name" {

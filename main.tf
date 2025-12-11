@@ -2,9 +2,9 @@ locals {
 
   tags={
     Environment = "dev-qa"
-    Studio = "eximius"
-    Division = "cd"
-    Account_Manager = "Ajay Kumar Singh"
+    Studio = "gk"
+    Division = "gk"
+    Account_Manager = "Guru kalyan"
   }
 
 }
@@ -59,14 +59,14 @@ resource "azurerm_key_vault" "keyvault" {
   network_acls {
     default_action             = "Deny"
     bypass                     = "AzureServices"
-    ip_rules                   = var.allowed_ip_addresses
+    ip_rules                   = var.akv_allowed_ip_addresses
     virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
   }
   tags = local.tags
 }
 
 resource "azurerm_private_dns_zone" "main" {
-  name                = var.azurerm_private_dns_zone_kv_name
+  name                = "privatelink.vaultcore.azure.net"
   resource_group_name = var.resourceGroupName
 
   tags = local.tags
@@ -163,7 +163,7 @@ resource "azurerm_storage_account" "st" {
   }
   network_rules {
     default_action             = "Deny"
-    ip_rules       = var.allowed_ip_addresses
+    ip_rules       = var.sta_allowed_ip_addresses
     bypass                     = ["AzureServices"]
     virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
   }
@@ -177,7 +177,7 @@ resource "azurerm_storage_container" "blob" {
 }
 
 resource "azurerm_private_dns_zone" "pdns_st" {
-  name                = var.azurerm_private_dns_zone_storage_name
+  name                = "privatelink.blob.core.windows.net"
   resource_group_name = var.resourceGroupName
 
   tags = local.tags
@@ -216,6 +216,17 @@ resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributo
   role_definition_name = "Contributor"
   principal_id         = module.aks.kubelet_identity[0].object_id
 }
+###################  Log Analytics Workspace ###################
+
+resource "azurerm_log_analytics_workspace" "la" {
+  name                = var.log_analytics_workspace_name
+  location            = var.location
+  resource_group_name = var.resourceGroupName
+  sku                 = "PerGB2018"
+  retention_in_days   = var.log_analytics_retention_days
+
+  tags = local.tags
+}
 ###################  AKS  ###################
 module "aks" {
   source                               = "Azure/aks/azurerm"
@@ -223,22 +234,21 @@ module "aks" {
   resource_group_name                  = var.resourceGroupName
   private_cluster_enabled              = false
   cluster_name                         = var.aks_cluster_name
+  sku_tier                             = "Standard"
   location                             = var.location
   agents_availability_zones            = var.aks_agents_availability_zones
   role_based_access_control_enabled    = true
   rbac_aad                             = false
   vnet_subnet_id                       = module.Vnet.vnet_subnets[1]
   network_policy                       = "azure"
-  net_profile_dns_service_ip           = var.net_profile_dns_service_ip
-  net_profile_service_cidr             = var.net_profile_service_cidr
   network_plugin                       = "azure"
-  cluster_log_analytics_workspace_name = var.log_analytics_workspace_name
+  cluster_log_analytics_workspace_name = azurerm_log_analytics_workspace.la.name
   log_analytics_workspace_enabled      = true
   agents_min_count                     = 1
-  agents_max_count                     = 1
+  agents_max_count                     = 2
   agents_count                         = null
   agents_pool_name                     = "gknodepool"
-  agents_size                          = "Standard_D2s_V3"
+  agents_size                          = "Standard_D2ps_V5"
   enable_auto_scaling                  = true
   key_vault_secrets_provider_enabled   = true
   storage_profile_blob_driver_enabled  = true
@@ -247,11 +257,11 @@ module "aks" {
   attached_acr_id_map = {
     acr = azurerm_container_registry.acr.id
   }
-  api_server_authorized_ip_ranges =  var.allowed_ip_addresses
+  api_server_authorized_ip_ranges =  var.aks_allowed_ip_addresses
   
   tags = local.tags
 
-  depends_on = [azurerm_container_registry.acr]
+  depends_on = [azurerm_container_registry.acr, module.Vnet.vnet_subnets, azurerm_log_analytics_workspace.la]
 }
 
 ###################  API Management ###################
@@ -266,26 +276,13 @@ resource "azurerm_api_management" "apim" {
 
   tags = local.tags
 }
-
-###################  Log Analytics Workspace ###################
-
-resource "azurerm_log_analytics_workspace" "la" {
-  name                = var.log_analytics_workspace_name
-  location            = var.location
-  resource_group_name = var.resourceGroupName
-  sku                 = "PerGB2018"
-  retention_in_days   = var.log_analytics_retention_days
-
-  tags = local.tags
-}
-
 ###################  Application Insights for APIM ###################
 
 resource "azurerm_application_insights" "ai_apim" {
-  name                = "${var.apim_name}-ai"
+  name                = "${var.apim_name}-appinsights"
   location            = var.location
   resource_group_name = var.resourceGroupName
-  application_type    = "web"
+  application_type    = "NodeJs"
 
   tags = local.tags
 }
