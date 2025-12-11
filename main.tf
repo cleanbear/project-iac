@@ -262,7 +262,7 @@ module "aks" {
   
   tags = local.tags
 
-  depends_on = [azurerm_container_registry.acr, module.Vnet.vnet_subnets, azurerm_log_analytics_workspace.la]
+  depends_on = [azurerm_container_registry.acr, module.Vnet]
 }
 
 ###################  API Management ###################
