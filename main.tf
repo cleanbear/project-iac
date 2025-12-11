@@ -147,20 +147,20 @@ resource "azurerm_storage_account" "st" {
   account_replication_type = "LRS"
   min_tls_version          = "TLS1_2"
   allow_nested_items_to_be_public = true
-  blob_properties {
-    delete_retention_policy {
-      days = 10
-    }
-    # cors_rule {
-    #   # Use empty lists when no CORS headers/origins are required.
-    #   # To allow specific origins, replace [] with e.g. ["https://example.com"]
-    #   allowed_headers    = [""]
-    #   allowed_methods    = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH"]
-    #   allowed_origins    = []
-    #   exposed_headers    = [""]
-    #   max_age_in_seconds = 0
-    # }
-  }
+  # blob_properties {
+  #   delete_retention_policy {
+  #     days = 10
+  #   }
+  #   # cors_rule {
+  #   #   # Use empty lists when no CORS headers/origins are required.
+  #   #   # To allow specific origins, replace [] with e.g. ["https://example.com"]
+  #   #   allowed_headers    = [""]
+  #   #   allowed_methods    = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH"]
+  #   #   allowed_origins    = []
+  #   #   exposed_headers    = [""]
+  #   #   max_age_in_seconds = 0
+  #   # }
+  # }
   network_rules {
     default_action             = "Deny"
     ip_rules       = var.sta_allowed_ip_addresses
