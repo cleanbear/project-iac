@@ -107,15 +107,15 @@ resource "azurerm_key_vault_access_policy" "kvpolicytf" {
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = data.azurerm_client_config.current.object_id
   key_permissions    = ["Get", "Create"]
-  secret_permissions = ["Get", "Set"]
+  secret_permissions = ["Get", "Set", "List"]
 }
 
 resource "azurerm_key_vault_access_policy" "kvpolicyuser" {
   key_vault_id       = azurerm_key_vault.kv.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = var.object_id
-  key_permissions    = ["Get", "Create"]
-  secret_permissions = ["Get", "Set"]
+  key_permissions    = ["Get", "Create", "List"]
+  secret_permissions = ["Get", "Set", "List"]
 }
 
 resource "azurerm_key_vault_access_policy" "kvpolicyaks" {
@@ -123,7 +123,7 @@ resource "azurerm_key_vault_access_policy" "kvpolicyaks" {
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = module.aks.kubelet_identity[0].object_id
   key_permissions    = ["Get"]
-  secret_permissions = ["Get"]
+  secret_permissions = ["Get", "List"]
 
   depends_on = [ module.aks ]
 }
