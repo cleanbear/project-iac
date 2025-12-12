@@ -106,24 +106,24 @@ resource "azurerm_key_vault_access_policy" "kvpolicytf" {
   key_vault_id       = azurerm_key_vault.kv.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = data.azurerm_client_config.current.object_id
-  key_permissions    = ["get", "create"]
-  secret_permissions = ["get", "set"]
+  key_permissions    = ["Get", "Create"]
+  secret_permissions = ["Get", "Set"]
 }
 
 resource "azurerm_key_vault_access_policy" "kvpolicyuser" {
   key_vault_id       = azurerm_key_vault.kv.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = var.object_id
-  key_permissions    = ["get", "create"]
-  secret_permissions = ["get", "set"]
+  key_permissions    = ["Get", "Create"]
+  secret_permissions = ["Get", "Set"]
 }
 
 resource "azurerm_key_vault_access_policy" "kvpolicyaks" {
   key_vault_id       = azurerm_key_vault.kv.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = module.aks.kubelet_identity[0].object_id
-  key_permissions    = ["get"]
-  secret_permissions = ["get"]
+  key_permissions    = ["Get"]
+  secret_permissions = ["Get"]
 
   depends_on = [ module.aks ]
 }
@@ -149,7 +149,7 @@ resource "azurerm_storage_account" "storage" {
 
 resource "azurerm_storage_container" "container" {
   name                  = var.storage_container_name
-  storage_account_id    = azurerm_storage_account.storage.id
+  storage_account_name    = azurerm_storage_account.storage.name
   container_access_type = "private"
 
   depends_on = [ azurerm_storage_account.storage ]
