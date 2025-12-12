@@ -14,7 +14,7 @@ permissions:
 jobs:
   plan:
     name: Terraform Plan + Checkov
-    environment: development
+    environment: dev-vars
     runs-on: ubuntu-latest
 
     steps:
@@ -74,22 +74,6 @@ jobs:
             echo "KEYVAULT_NAME or KEYVAULT_TFVARS_SECRET_NAME not set; skipping Key Vault fetch."
           fi
 
-      - name: Populate terraform.tfvars (optional)
-        # Supports either a raw multiline secret `TERRAFORM_TFVARS` or a base64-encoded secret `TERRAFORM_TFVARS_B64`
-        run: |
-          if [ -n "${{ secrets.TERRAFORM_TFVARS_B64 }}" ] || [ -n "${{ secrets.TERRAFORM_TFVARS }}" ]; then
-            echo "Preparing terraform.tfvars from repository secret..."
-            if [ -n "${{ secrets.TERRAFORM_TFVARS_B64 }}" ]; then
-              echo "Decoding base64 secret into terraform.tfvars"
-              printf '%s' "${{ secrets.TERRAFORM_TFVARS_B64 }}" | base64 --decode > terraform.tfvars
-            else
-              echo "Writing raw secret into terraform.tfvars"
-              printf '%s' "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
-            fi
-          else
-            echo "No TERRAFORM_TFVARS or TERRAFORM_TFVARS_B64 provided; skipping."
-          fi
-
       - name: Upload plan artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -123,7 +107,7 @@ jobs:
     name: Terraform Apply (requires approval)
     runs-on: ubuntu-latest
     needs: plan
-    environment: development
+    environment: dev-vars-approvers
 
     steps:
       - name: Checkout repository
