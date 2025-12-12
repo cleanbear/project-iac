@@ -48,11 +48,6 @@ variable "aks_agents_availability_zones" {
   type        = list(string)
 }
 
-variable "aks_prefix" {
-  description = "Prefix for AKS-related resources."
-  type        = string
-}
-
 variable "log_analytics_ws_name" {
   description = "name for LogAnalytics."
   type        = string
