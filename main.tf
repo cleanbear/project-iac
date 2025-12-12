@@ -2,8 +2,8 @@ locals {
 
   tags={
     Environment = "dev-qa"
-    Studio = "gk"
-    Division = "gk"
+    Studio = "mgk"
+    Division = "mgk"
     Account_Manager = "Guru kalyan"
   }
 
@@ -40,140 +40,139 @@ resource "azurerm_container_registry" "acr" {
   tags = local.tags
 }
 
-###################  Key Vault  ###################
+###################  API Management ###################
+
+resource "azurerm_api_management" "apim" {
+  name                = var.apim_name
+  location            = var.location
+  resource_group_name = var.resourceGroupName
+  publisher_name      = var.apim_publisher_name
+  publisher_email     = var.apim_publisher_email
+  sku_name            = var.apim_sku
+
+  tags = local.tags
+}
+
+
+###################  Key Vault + Private Endpoint ###################
 
 data "azurerm_client_config" "current" {}
 
-resource "azurerm_key_vault" "keyvault" {
-  name                     = var.key_vault_name
-  location                 = var.location
-  resource_group_name      = var.resourceGroupName
-  tenant_id                = data.azurerm_client_config.current.tenant_id
-  sku_name                 = "standard"
-  purge_protection_enabled    = true
-  soft_delete_retention_days  = 7
+resource "azurerm_key_vault" "kv" {
+  name                = var.key_vault_name
+  location            = var.location
+  resource_group_name = var.resourceGroupName
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  sku_name            = "standard"
 
-  network_acls {
-    default_action             = "Deny"
-    bypass                     = "AzureServices"
-    ip_rules                   = []
-    virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
-  }
   tags = local.tags
 }
 
+# Private DNS zone for Key Vault private endpoint
 resource "azurerm_private_dns_zone" "kv" {
   name                = "privatelink.vaultcore.azure.net"
   resource_group_name = var.resourceGroupName
-
-  tags = local.tags
 }
 
-resource "azurerm_private_endpoint" "pe_kv" {
+resource "azurerm_private_dns_zone_virtual_network_link" "kv_link" {
+  name                  = var.azurerm_private_dns_zone_virtual_network_link_kv_name
+  resource_group_name   = var.resourceGroupName
+  private_dns_zone_name = azurerm_private_dns_zone.kv.name
+  virtual_network_id    = module.Vnet.vnet_id
+  registration_enabled  = false
+
+  depends_on = [azurerm_private_dns_zone.kv, module.Vnet]
+}
+
+# Private endpoint for Key Vault using subnet[0]
+resource "azurerm_private_endpoint" "kv_pe" {
   name                = var.azurerm_private_endpoint_kv_name
   location            = var.location
   resource_group_name = var.resourceGroupName
   subnet_id           = module.Vnet.vnet_subnets[0]
 
+  private_service_connection {
+    name                           = var.private_service_connection_kv_name
+    private_connection_resource_id = azurerm_key_vault.kv.id
+    is_manual_connection           = false
+    subresource_names              = ["vault"]
+  }
+
   private_dns_zone_group {
     name                 = var.private_dns_zone_group_kv_name
     private_dns_zone_ids = [azurerm_private_dns_zone.kv.id]
   }
-
-  private_service_connection {
-    name                           = var.private_service_connection_kv_name
-    private_connection_resource_id = azurerm_key_vault.keyvault.id
-    is_manual_connection           = false
-    subresource_names              = ["Vault"]
-  }
-  tags = local.tags
-
-  depends_on = [ module.Vnet, azurerm_key_vault.keyvault, azurerm_private_dns_zone.kv ]
 }
 
-resource "azurerm_private_dns_zone_virtual_network_link" "kv_private_dns_zone_virtual_network_link1" {
-  name                  = var.azurerm_private_dns_zone_virtual_network_link_kv_name
-  private_dns_zone_name = azurerm_private_dns_zone.kv.name
-  resource_group_name   = var.resourceGroupName
-  virtual_network_id    = module.Vnet.vnet_id
-
-  tags = local.tags
-
-  depends_on = [ module.Vnet, azurerm_private_dns_zone.kv ]
+resource "azurerm_key_vault_access_policy" "kvpolicytf" {
+  key_vault_id       = azurerm_key_vault.kv.id
+  tenant_id          = data.azurerm_client_config.current.tenant_id
+  object_id          = data.azurerm_client_config.current.object_id
+  key_permissions    = ["get", "create"]
+  secret_permissions = ["get", "set"]
 }
 
-resource "azurerm_key_vault_access_policy" "kvpolicy" {
-  key_vault_id       = azurerm_key_vault.keyvault.id
+resource "azurerm_key_vault_access_policy" "kvpolicyuser" {
+  key_vault_id       = azurerm_key_vault.kv.id
+  tenant_id          = data.azurerm_client_config.current.tenant_id
+  object_id          = var.object_id
+  key_permissions    = ["get", "create"]
+  secret_permissions = ["get", "set"]
+}
+
+resource "azurerm_key_vault_access_policy" "kvpolicyaks" {
+  key_vault_id       = azurerm_key_vault.kv.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = module.aks.kubelet_identity[0].object_id
-  key_permissions    = ["Get"]
-  secret_permissions = ["Get"]
+  key_permissions    = ["get"]
+  secret_permissions = ["get"]
 
   depends_on = [ module.aks ]
 }
 
-resource "azurerm_key_vault_access_policy" "kvpolicytf" {
-  key_vault_id       = azurerm_key_vault.keyvault.id
-  tenant_id          = data.azurerm_client_config.current.tenant_id
-  object_id          = data.azurerm_client_config.current.object_id
-  key_permissions    = ["Get", "Create"]
-  secret_permissions = ["Get", "Set"]
-}
 
-resource "azurerm_key_vault_access_policy" "kvpolicyuser" {
-  key_vault_id       = azurerm_key_vault.keyvault.id
-  tenant_id          = data.azurerm_client_config.current.tenant_id
-  object_id          = var.object_id
-  key_permissions    = ["Get", "Create"]
-  secret_permissions = ["Get", "Set"]
-}
+###################  Storage Account + Private Endpoint (use subnet[0]) ###################
 
-##################  Storage Account (Azure Blob) ###################
-resource "azurerm_storage_account" "st" {
+resource "azurerm_storage_account" "storage" {
   name                     = var.azurerm_storage_account_name
   resource_group_name      = var.resourceGroupName
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  blob_properties {
-    delete_retention_policy {
-      days = 10
-    }
-    # cors_rule {
-    #   # Use empty lists when no CORS headers/origins are required.
-    #   # To allow specific origins, replace [] with e.g. ["https://example.com"]
-    #   allowed_headers    = [""]
-    #   allowed_methods    = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH"]
-    #   allowed_origins    = []
-    #   exposed_headers    = [""]
-    #   max_age_in_seconds = 0
-    # }
-  }
-  network_rules {
-    default_action             = "Deny"
-    ip_rules       = []
-    bypass                     = ["AzureServices"]
-    virtual_network_subnet_ids = [module.Vnet.vnet_subnets[0], module.Vnet.vnet_subnets[1]]
-  }
+  account_kind             = "StorageV2"
+
+  # network_rules {
+  #   default_action = "Deny"
+  #   bypass         = ["AzureServices"]
+  # }
+
   tags = local.tags
 }
 
-resource "azurerm_storage_container" "blob" {
+resource "azurerm_storage_container" "container" {
   name                  = var.storage_container_name
-  storage_account_name  = azurerm_storage_account.st.name
-  container_access_type = "blob"
+  storage_account_id    = azurerm_storage_account.storage.id
+  container_access_type = "private"
 
-  depends_on = [ azurerm_storage_account.st ]
+  depends_on = [ azurerm_storage_account.storage ]
 }
 
-resource "azurerm_private_dns_zone" "pdns_st" {
+resource "azurerm_private_dns_zone" "storage" {
   name                = "privatelink.blob.core.windows.net"
   resource_group_name = var.resourceGroupName
-
-  tags = local.tags
 }
 
-resource "azurerm_private_endpoint" "pep_st" {
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_link" {
+  name                  = var.azurerm_private_dns_zone_virtual_network_link_storage_name
+  resource_group_name   = var.resourceGroupName
+  private_dns_zone_name = azurerm_private_dns_zone.storage.name
+  virtual_network_id    = module.Vnet.vnet_id
+  registration_enabled  = false
+
+  depends_on = [azurerm_private_dns_zone.storage, module.Vnet]
+}
+
+resource "azurerm_private_endpoint" "storage_pe" {
   name                = var.azurerm_private_endpoint_storage_name
   location            = var.location
   resource_group_name = var.resourceGroupName
@@ -181,39 +180,19 @@ resource "azurerm_private_endpoint" "pep_st" {
 
   private_service_connection {
     name                           = var.private_service_connection_storage_name
-    private_connection_resource_id = azurerm_storage_account.st.id
-    subresource_names              = ["blob"]
+    private_connection_resource_id = azurerm_storage_account.storage.id
     is_manual_connection           = false
+    subresource_names              = ["blob"]
   }
 
   private_dns_zone_group {
     name                 = var.private_dns_zone_group_storage_name
-    private_dns_zone_ids = [azurerm_private_dns_zone.pdns_st.id]
+    private_dns_zone_ids = [azurerm_private_dns_zone.storage.id]
   }
-  tags = local.tags
 
-  depends_on = [ module.Vnet, azurerm_storage_account.st, azurerm_private_dns_zone.pdns_st ]
+  depends_on = [ module.Vnet, azurerm_storage_account.storage, azurerm_private_dns_zone.storage ]
 }
 
-resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_lnk_sta" {
-  name                  = var.azurerm_private_dns_zone_virtual_network_link_storage_name
-  resource_group_name   = var.resourceGroupName
-  private_dns_zone_name = azurerm_private_dns_zone.pdns_st.name
-  virtual_network_id    = module.Vnet.vnet_id
-  tags = local.tags
-
-  depends_on = [ module.Vnet, azurerm_private_dns_zone.pdns_st ]
-}
-
-resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributor" {
-  scope                = azurerm_storage_account.st.id
-  role_definition_name = "Contributor"
-  principal_id         = module.aks.kubelet_identity[0].object_id
-
-  depends_on = [ module.aks, azurerm_storage_account.st ]
-}
-
-###################  AKS  ###################
 module "aks" {
   source                               = "Azure/aks/azurerm"
   version                              = "9.4.1"
@@ -227,47 +206,19 @@ module "aks" {
   rbac_aad                             = false
   network_policy                       = "azure"
   network_plugin                       = "azure"
-  cluster_log_analytics_workspace_name = var.log_analytics_workspace_name
+  cluster_log_analytics_workspace_name = var.log_analytics_ws_name #which analytics WS is it referring to?
   log_analytics_workspace_enabled      = true
   agents_min_count                     = 1
   agents_max_count                     = 2
-  agents_count                         = null
-  agents_pool_name                     = "gknodepool"
+  agents_pool_name                     = "mgkpool"
   agents_size                          = "Standard_D2ps_V5"
   enable_auto_scaling                  = true
-  key_vault_secrets_provider_enabled   = true
-  storage_profile_blob_driver_enabled  = true
-  storage_profile_disk_driver_enabled  = true
-  prefix                               = var.aks_prefix
-  attached_acr_id_map = {
+  prefix                               = "mgk"
+  attached_acr_id_map                  = {
     acr = azurerm_container_registry.acr.id
   }
-  api_server_authorized_ip_ranges =  []
-  
-  tags = local.tags
-
-  depends_on = [azurerm_container_registry.acr, module.Vnet]
-}
-
-###################  API Management ###################
-
-resource "azurerm_api_management" "apim" {
-  name                = var.apim_name
-  location            = var.location
-  resource_group_name = var.resourceGroupName
-  publisher_name      = var.apim_publisher_name
-  publisher_email     = var.apim_publisher_email
-  sku_name            = var.apim_sku
 
   tags = local.tags
-}
-###################  Application Insights for APIM ###################
 
-resource "azurerm_application_insights" "ai_apim" {
-  name                = "${var.apim_name}-ai"
-  location            = var.location
-  resource_group_name = var.resourceGroupName
-  application_type    = "Node.JS"
-
-  tags = local.tags
+  depends_on = [ azurerm_container_registry.acr ]
 }
