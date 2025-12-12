@@ -133,36 +133,27 @@ variable "azurerm_private_dns_zone_virtual_network_link_kv_name" {
 
 variable "object_id" {
   description = "Object ID of user for Key Vault access policy."
+  type        = string
 }
 
 variable "apim_name" {
   description = "The name of the API Management service."
   type        = string
-  default     = "apim-service"
 }
 
 variable "apim_publisher_name" {
   description = "Publisher/display name for APIM."
   type        = string
-  default     = "Dev Team"
 }
 
 variable "apim_publisher_email" {
   description = "Publisher email for APIM."
   type        = string
-  default     = "devops@example.com"
 }
 
 variable "apim_sku" {
   description = "SKU name for API Management. Use 'Consumption_0' for Consumption tier."
   type        = string
-  default     = "Consumption_0"
-}
-
-variable "log_analytics_workspace_name" {
-  description = "Name of the Log Analytics workspace used for cluster and APIM diagnostics."
-  type        = string
-  default     = "gk-eastus2-prod-loganalyticsws"
 }
 
 # variable "log_analytics_retention_days" {
