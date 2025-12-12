@@ -135,20 +135,20 @@ resource "azurerm_storage_account" "st" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  # blob_properties {
-  #   delete_retention_policy {
-  #     days = 10
-  #   }
-  #   # cors_rule {
-  #   #   # Use empty lists when no CORS headers/origins are required.
-  #   #   # To allow specific origins, replace [] with e.g. ["https://example.com"]
-  #   #   allowed_headers    = [""]
-  #   #   allowed_methods    = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH"]
-  #   #   allowed_origins    = []
-  #   #   exposed_headers    = [""]
-  #   #   max_age_in_seconds = 0
-  #   # }
-  # }
+  blob_properties {
+    delete_retention_policy {
+      days = 10
+    }
+    # cors_rule {
+    #   # Use empty lists when no CORS headers/origins are required.
+    #   # To allow specific origins, replace [] with e.g. ["https://example.com"]
+    #   allowed_headers    = [""]
+    #   allowed_methods    = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH"]
+    #   allowed_origins    = []
+    #   exposed_headers    = [""]
+    #   max_age_in_seconds = 0
+    # }
+  }
   network_rules {
     default_action             = "Deny"
     ip_rules       = []
@@ -212,17 +212,7 @@ resource "azurerm_role_assignment" "assign_identity_storage_blob_data_contributo
 
   depends_on = [ module.aks, azurerm_storage_account.st ]
 }
-# ###################  Log Analytics Workspace ###################
 
-# resource "azurerm_log_analytics_workspace" "la" {
-#   name                = var.log_analytics_workspace_name
-#   location            = var.location
-#   resource_group_name = var.resourceGroupName
-#   sku                 = "PerGB2018"
-#   retention_in_days   = var.log_analytics_retention_days
-
-#   tags = local.tags
-# }
 ###################  AKS  ###################
 module "aks" {
   source                               = "Azure/aks/azurerm"
@@ -274,49 +264,10 @@ resource "azurerm_api_management" "apim" {
 ###################  Application Insights for APIM ###################
 
 resource "azurerm_application_insights" "ai_apim" {
-  name                = "${var.apim_name}-appinsights"
+  name                = "${var.apim_name}-ai"
   location            = var.location
   resource_group_name = var.resourceGroupName
   application_type    = "Node.JS"
 
   tags = local.tags
 }
-
-# Create APIM logger that points to App Insights (using azapi to avoid provider schema mismatches)
-# resource "azapi_resource" "apim_logger" {
-#   type      = "Microsoft.ApiManagement/service/loggers@2021-08-01"
-#   name      = "appinsights-logger"
-#   parent_id = azurerm_api_management.apim.id
-
-#   body = jsonencode({
-#     properties = {
-#       loggerType  = "applicationinsights"
-#       description = "Application Insights logger for APIM"
-#       credentials = {
-#         instrumentationKey = azurerm_application_insights.ai_apim.instrumentation_key
-#       }
-#     }
-#   })
-
-#   depends_on = [azurerm_api_management.apim, azurerm_application_insights.ai_apim]
-# }
-
-# # Create APIM diagnostic that uses the above logger (sends telemetry to App Insights)
-# resource "azapi_resource" "apim_ai_diag" {
-#   type      = "Microsoft.ApiManagement/service/diagnostics@2021-08-01"
-#   name      = "appinsights-diagnostic"
-#   parent_id = azurerm_api_management.apim.id
-
-#   body = jsonencode({
-#     properties = {
-#       enabled   = true
-#       alwaysLog = "allErrors"
-#       loggerId  = azapi_resource.apim_logger.id
-#       sampling  = { sample = 100 }
-#       frontend  = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
-#       backend   = { request = { headers = [ "*" ] }, response = { headers = [ "*" ] } }
-#     }
-#   })
-
-#   depends_on = [azapi_resource.apim_logger, azurerm_api_management.apim]
-# }
