@@ -53,6 +53,11 @@ variable "aks_prefix" {
   type        = string
 }
 
+variable "log_analytics_ws_name" {
+  description = "name for LogAnalytics."
+  type        = string
+}
+
 # variable "aks_allowed_ip_addresses" {
 #   description = "List of allowed IP addresses for AKS."
 #   type        = list(string)
@@ -129,14 +134,6 @@ variable "azurerm_private_dns_zone_virtual_network_link_kv_name" {
 variable "object_id" {
   description = "Object ID of user for Key Vault access policy."
 }
-
-# variable "kvsecrets" {
-#   description = "List of key vault secrets."
-#   type        = list(object({
-#     name  = string
-#     value = string
-#   }))
-# }
 
 variable "apim_name" {
   description = "The name of the API Management service."
