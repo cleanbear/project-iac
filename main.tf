@@ -6,9 +6,7 @@ locals {
     Division = "mgk"
     Account_Manager = "Guru kalyan"
   }
-
 }
-
 ###################  Virtual Network ###################
 
 module "Vnet" {
